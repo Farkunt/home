@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=yes">
+  <title>Farixd — Hand Tracking</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    :root {
+      --bg: #FDF7E4;
+      --bg-secondary: #FFFFFF;
+      --text-primary: #1A1A1A;
+      --text-secondary: #555555;
+      --border: #1A1A1A;
+      --accent: #9B5DE5;
+      --accent-secondary: #FFD23F;
+      --accent-green: #2DD881;
+      --accent-blue: #4ECDC4;
+      --accent-red: #FF6B35;
+      --accent-pink: #F15BB5;
+      --shadow: 4px 4px 0px #1A1A1A;
+      --shadow-lg: 6px 6px 0px #1A1A1A;
+      --radius: 12px;
+    }
+
+    body {
+      font-family: 'Space Grotesk', -apple-system, BlinkMacSystemFont, sans-serif;
+      background: var(--bg);
+      color: var(--text-primary);
+      min-height: 100vh;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      padding: 24px;
+      line-height: 1.6;
+      background-image:
+        radial-gradient(circle at 20% 80%, rgba(155, 93, 229, 0.12) 0%, transparent 50%),
+        radial-gradient(circle at 80% 20%, rgba(241, 91, 181, 0.1) 0%, transparent 50%);
+    }
+
+    .container {
+      max-width: 750px;
+      width: 100%;
+    }
+
+    /* Settings Panel */
+    .settings-panel {
+      background: var(--bg-secondary);
+      border: 4px solid var(--border);
+      border-radius: 20px;
+      padding: 20px;
+      margin-bottom: 18px;
+      box-shadow: var(--shadow-lg);
+    }
+
+    .settings-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .settings-header h3 {
+      font-size: 15px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+    }
+
+    .settings-toggle {
+      font-size: 18px;
+      transition: transform 0.2s ease;
+    }
+
+    .settings-toggle.open {
+      transform: rotate(180deg);
+    }
+
+    .settings-body {
+      margin-top: 16px;
+      display: none;
+      border-top: 3px dashed var(--border);
+      padding-top: 16px;
+    }
+
+    .settings-body.show {
+      display: block;
+    }
+
+    .gesture-settings-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 10px;
+      max-height: 300px;
+      overflow-y: auto;
+      padding-right: 4px;
+    }
+
+    .gesture-setting-item {
+      background: var(--bg);
+      border: 2px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 12px;
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      box-shadow: 2px 2px 0px var(--border);
+    }
+
+    .gesture-setting-icon {
+      font-size: 24px;
+      min-width: 32px;
+      text-align: center;
+    }
+
+    .gesture-setting-input {
+      flex: 1;
+      padding: 8px 10px;
+      background: var(--bg-secondary);
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      font-size: 12px;
+      font-family: inherit;
+      font-weight: 600;
+      color: var(--text-primary);
+      outline: none;
+      min-width: 0;
+    }
+
+    .gesture-setting-input:focus {
+      box-shadow: 2px 2px 0px var(--border);
+    }
+
+    .btn-sm {
+      padding: 8px 14px;
+      background: var(--accent);
+      border: 2px solid var(--border);
+      border-radius: 6px;
+      color: white;
+      font-size: 11px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      box-shadow: 2px 2px 0px var(--border);
+      text-transform: uppercase;
+      white-space: nowrap;
+    }
+
+    .btn-sm:active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
+
+    /* Card */
+    .card {
+      background: var(--bg-secondary);
+      border: 4px solid var(--border);
+      border-radius: 20px;
+      padding: 28px;
+      box-shadow: var(--shadow-lg);
+      position: relative;
+    }
+
+    .header {
+      text-align: center;
+      margin-bottom: 20px;
+      padding-bottom: 16px;
+      border-bottom: 4px dashed var(--border);
+    }
+
+    .header-badge {
+      display: inline-block;
+      background: var(--accent);
+      color: white;
+      padding: 6px 16px;
+      border-radius: 50px;
+      font-size: 12px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 12px;
+      border: 3px solid var(--border);
+      box-shadow: 3px 3px 0px var(--border);
+    }
+
+    .header h1 {
+      font-size: 28px;
+      font-weight: 700;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+    }
+
+    .header p {
+      color: var(--text-secondary);
+      font-size: 14px;
+      font-weight: 500;
+      margin-top: 4px;
+    }
+
+    /* Camera Container */
+    .camera-container {
+      position: relative;
+      width: 100%;
+      background: #000;
+      border: 4px solid var(--border);
+      border-radius: var(--radius);
+      overflow: hidden;
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 14px;
+      aspect-ratio: 4 / 3;
+    }
+
+    #videoCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      object-fit: cover;
+      transform: scaleX(1);
+    }
+
+    #overlayCanvas {
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 10;
+    }
+
+    .camera-off {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: white;
+      font-size: 18px;
+      font-weight: 700;
+      text-align: center;
+      background: #1e1e2f;
+      position: absolute;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      z-index: 5;
+    }
+
+    /* Gesture Display */
+    .gesture-display {
+      background: var(--accent);
+      color: white;
+      border: 4px solid var(--border);
+      border-radius: var(--radius);
+      padding: 14px 20px;
+      text-align: center;
+      box-shadow: var(--shadow-lg);
+      margin-bottom: 10px;
+      min-height: 55px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      transition: background 0.2s;
+    }
+
+    .gesture-icon {
+      font-size: 36px;
+    }
+
+    .gesture-name {
+      font-size: 22px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    .gesture-confidence {
+      font-size: 12px;
+      opacity: 0.8;
+      margin-top: 2px;
+    }
+
+    /* Finger Info */
+    .finger-info {
+      display: grid;
+      grid-template-columns: repeat(5, 1fr);
+      gap: 8px;
+      margin-bottom: 10px;
+    }
+
+    .finger-item {
+      background: var(--bg);
+      border: 3px solid var(--border);
+      border-radius: var(--radius);
+      padding: 10px 6px;
+      text-align: center;
+      box-shadow: var(--shadow);
+      transition: all 0.10s ease;
+    }
+
+    .finger-item.active {
+      background: var(--accent-green);
+      color: #1A1A1A;
+      border-color: var(--border);
+      transform: translate(-2px, -2px);
+    }
+
+    .finger-emoji {
+      font-size: 22px;
+    }
+
+    .finger-label {
+      font-size: 10px;
+      font-weight: 700;
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      margin-top: 4px;
+    }
+
+    /* Controls */
+    .btn-row {
+      display: flex;
+      gap: 8px;
+      flex-wrap: wrap;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 80px;
+      padding: 12px 16px;
+      border: 4px solid var(--border);
+      border-radius: var(--radius);
+      font-size: 13px;
+      font-weight: 700;
+      font-family: inherit;
+      cursor: pointer;
+      transition: all 0.10s ease;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      box-shadow: var(--shadow);
+      text-transform: uppercase;
+      letter-spacing: 0.5px;
+      white-space: nowrap;
+    }
+
+    .btn:hover {
+      transform: translate(-2px, -2px);
+      box-shadow: 4px 4px 0px var(--border);
+    }
+
+    .btn:active {
+      transform: translate(2px, 2px);
+      box-shadow: none;
+    }
+
+    .btn:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+      transform: none;
+      box-shadow: var(--shadow);
+    }
+
+    .btn-start { background: var(--accent-green); color: #1A1A1A; }
+    .btn-stop { background: var(--accent-red); color: white; }
+    .btn-toggle-skeleton { background: var(--accent-blue); color: #1A1A1A; }
+    .btn-toggle-voice { background: var(--accent-pink); color: white; }
+
+    .fps-display {
+      position: absolute;
+      top: 8px;
+      right: 8px;
+      background: rgba(0,0,0,0.7);
+      color: #2DD881;
+      padding: 4px 10px;
+      border-radius: 6px;
+      font-size: 11px;
+      font-weight: 700;
+      z-index: 20;
+      border: 2px solid var(--border);
+    }
+
+    .footer-decoration {
+      display: flex;
+      justify-content: center;
+      gap: 10px;
+      margin-top: 16px;
+    }
+
+    .footer-decoration span {
+      width: 10px;
+      height: 10px;
+      border-radius: 50%;
+      border: 2px solid var(--border);
+    }
+
+    .footer-decoration span:nth-child(1) { background: var(--accent); }
+    .footer-decoration span:nth-child(2) { background: var(--accent-secondary); }
+    .footer-decoration span:nth-child(3) { background: var(--accent-green); }
+    .footer-decoration span:nth-child(4) { background: var(--accent-blue); }
+    .footer-decoration span:nth-child(5) { background: var(--accent-pink); }
+
+    @media (max-width: 500px) {
+      .card { padding: 16px; }
+      .header h1 { font-size: 20px; }
+      .finger-info { gap: 4px; }
+      .finger-item { padding: 8px 3px; }
+      .finger-emoji { font-size: 18px; }
+      .finger-label { font-size: 8px; }
+      .gesture-name { font-size: 15px; }
+      .btn { font-size: 11px; padding: 10px 12px; }
+      .gesture-settings-grid { grid-template-columns: 1fr; }
+    }
+  </style>
+</head>
+<body>
+  <div class="container">
+    <!-- Settings Panel -->
+    <div class="settings-panel">
+      <div class="settings-header" id="settingsHeader">
+        <h3>⚙️ Custom Nama Gestur</h3>
+        <span class="settings-toggle" id="settingsToggle">▼</span>
+      </div>
+      <div class="settings-body" id="settingsBody">
+        <div class="gesture-settings-grid" id="gestureSettingsGrid">
+          <!-- Generated by JS -->
+        </div>
+        <div style="margin-top:12px;display:flex;gap:8px;">
+          <button class="btn-sm" id="btnSaveSettings">💾 Simpan</button>
+          <button class="btn-sm" id="btnResetSettings" style="background:var(--accent-red);">🔄 Reset Default</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Main Card -->
+    <div class="card">
+      <div class="header">
+        <div class="header-badge">🖐️ Hand Tracking</div>
+        <h1>✋ Farixd - Hand Tracking</h1>
+        <p>Deteksi tangan • ESP Skeleton • Suara Google • Custom Gesture</p>
+      </div>
+
+      <!-- Camera -->
+      <div class="camera-container" id="cameraContainer">
+        <video id="videoCanvas" autoplay playsinline style="display:none;"></video>
+        <canvas id="overlayCanvas"></canvas>
+        <div class="camera-off" id="cameraOff">
+          📷 Kamera belum aktif
+        </div>
+        <div class="fps-display" id="fpsDisplay" style="display:none;">FPS: --</div>
+      </div>
+
+      <!-- Gesture Name -->
+      <div class="gesture-display" id="gestureDisplay">
+        <span class="gesture-icon">🖐️</span>
+        <div>
+          <div class="gesture-name" id="gestureName">Menunggu...</div>
+          <div class="gesture-confidence" id="gestureConfidence"></div>
+        </div>
+      </div>
+
+      <!-- Finger Status -->
+      <div class="finger-info" id="fingerInfo">
+        <div class="finger-item" id="fingerThumb">
+          <div class="finger-emoji">👍</div>
+          <div class="finger-label">Jempol</div>
+        </div>
+        <div class="finger-item" id="fingerIndex">
+          <div class="finger-emoji">👆</div>
+          <div class="finger-label">Telunjuk</div>
+        </div>
+        <div class="finger-item" id="fingerMiddle">
+          <div class="finger-emoji">🖕</div>
+          <div class="finger-label">Tengah</div>
+        </div>
+        <div class="finger-item" id="fingerRing">
+          <div class="finger-emoji">💍</div>
+          <div class="finger-label">Manis</div>
+        </div>
+        <div class="finger-item" id="fingerPinky">
+          <div class="finger-emoji">🤙</div>
+          <div class="finger-label">Kelingking</div>
+        </div>
+      </div>
+
+      <!-- Buttons -->
+      <div class="btn-row">
+        <button id="btnStart" class="btn btn-start">▶ Mulai</button>
+        <button id="btnStop" class="btn btn-stop" disabled>⏹ Stop</button>
+        <button id="btnToggleSkeleton" class="btn btn-toggle-skeleton">🦴 Skeleton ON</button>
+        <button id="btnToggleVoice" class="btn btn-toggle-voice">🔊 Suara ON</button>
+      </div>
+    </div>
+
+    <div class="footer-decoration">
+      <span></span><span></span><span></span><span></span><span></span>
+    </div>
+  </div>
+
+  <!-- MediaPipe Hands -->
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/camera_utils/camera_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/control_utils/control_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/drawing_utils/drawing_utils.js" crossorigin="anonymous"></script>
+  <script src="https://cdn.jsdelivr.net/npm/@mediapipe/hands/hands.js" crossorigin="anonymous"></script>
+
+  <script>
+    (function() {
+      // === DOM Elements ===
+      const videoElement = document.getElementById('videoCanvas');
+      const overlayCanvas = document.getElementById('overlayCanvas');
+      const overlayCtx = overlayCanvas.getContext('2d');
+      const cameraContainer = document.getElementById('cameraContainer');
+      const cameraOff = document.getElementById('cameraOff');
+      const gestureName = document.getElementById('gestureName');
+      const gestureConfidence = document.getElementById('gestureConfidence');
+      const gestureIcon = document.querySelector('.gesture-icon');
+      const gestureDisplay = document.getElementById('gestureDisplay');
+      const fpsDisplay = document.getElementById('fpsDisplay');
+      const btnStart = document.getElementById('btnStart');
+      const btnStop = document.getElementById('btnStop');
+      const btnToggleSkeleton = document.getElementById('btnToggleSkeleton');
+      const btnToggleVoice = document.getElementById('btnToggleVoice');
+      const gestureSettingsGrid = document.getElementById('gestureSettingsGrid');
+      const settingsBody = document.getElementById('settingsBody');
+      const settingsToggle = document.getElementById('settingsToggle');
+      const settingsHeader = document.getElementById('settingsHeader');
+
+      // === Default Gesture Config ===
+      const DEFAULT_GESTURES = {
+        'FIST': { icon: '✊', name: 'Nama', speech: 'Nama', color: '#FF6B35' },
+        'OPEN_PALM': { icon: '🤚', name: 'Saya', speech: 'Saya', color: '#2DD881' },
+        'THUMBS_UP': { icon: '👍', name: 'Jempol', speech: 'Jempol', color: '#FFD23F' },
+        'PEACE': { icon: '✌️', name: 'Peace', speech: 'Peace', color: '#4ECDC4' },
+        'OK': { icon: '👌', name: 'OK', speech: 'OK', color: '#9B5DE5' },
+        'POINT_UP': { icon: '☝️', name: 'Menunjuk', speech: 'Menunjuk', color: '#F15BB5' },
+        'ROCK_ON': { icon: '🤘', name: 'Rock On', speech: 'Rock On', color: '#FF6B35' },
+        'THREE': { icon: '🖖', name: 'Terima Kasih', speech: 'Terima kasih', color: '#9B5DE5' },
+        'FOUR': { icon: '🖖', name: 'Empat Jari', speech: 'Empat jari', color: '#4ECDC4' },
+        'CALL_ME': { icon: '🤙', name: 'Call Me', speech: 'Call me', color: '#F15BB5' },
+        'HEART': { icon: '🫰', name: 'Farid', speech: 'Farid', color: '#FF6B35' },
+        'UNKNOWN': { icon: '🤔', name: 'Tidak Dikenali', speech: '', color: '#9B5DE5' }
+      };
+
+      // Load saved or use default
+      let gestureConfig = loadGestureConfig();
+
+      function loadGestureConfig() {
+        try {
+          const saved = localStorage.getItem('farixd_gesture_config');
+          if (saved) {
+            const parsed = JSON.parse(saved);
+            // Merge with defaults to ensure all keys exist
+            const merged = { ...DEFAULT_GESTURES };
+            for (const key of Object.keys(parsed)) {
+              if (merged[key]) {
+                merged[key] = { ...merged[key], ...parsed[key] };
+              }
+            }
+            return merged;
+          }
+        } catch (e) { /* ignore */ }
+        return { ...DEFAULT_GESTURES };
+      }
+
+      function saveGestureConfig() {
+        localStorage.setItem('farixd_gesture_config', JSON.stringify(gestureConfig));
+      }
+
+      // === State ===
+      let hands = null;
+      let cameraInstance = null;
+      let isTracking = false;
+      let showSkeleton = true;
+      let voiceEnabled = true;
+      let lastGesture = '';
+      let lastSpokenTime = 0;
+      const SPEAK_COOLDOWN = 1500;
+
+      let frameCount = 0;
+      let lastFpsTime = performance.now();
+      let currentFps = 0;
+      const PROCESS_EVERY_N_FRAMES = 2;
+      let frameSkipCounter = 0;
+
+      const fingerEls = {
+        thumb: document.getElementById('fingerThumb'),
+        index: document.getElementById('fingerIndex'),
+        middle: document.getElementById('fingerMiddle'),
+        ring: document.getElementById('fingerRing'),
+        pinky: document.getElementById('fingerPinky')
+      };
+
+      const FINGER_TIPS = { thumb: 4, index: 8, middle: 12, ring: 16, pinky: 20 };
+      const FINGER_MCP = { thumb: 2, index: 5, middle: 9, ring: 13, pinky: 17 };
+      const FINGER_PIP = { thumb: 3, index: 6, middle: 10, ring: 14, pinky: 18 };
+
+      const CONNECTIONS = [
+        [0, 1], [1, 2], [2, 3], [3, 4],
+        [0, 5], [5, 6], [6, 7], [7, 8],
+        [0, 9], [9, 10], [10, 11], [11, 12],
+        [0, 13], [13, 14], [14, 15], [15, 16],
+        [0, 17], [17, 18], [18, 19], [19, 20],
+        [5, 9], [9, 13], [13, 17]
+      ];
+
+      // === Settings Panel Toggle ===
+      settingsHeader.addEventListener('click', () => {
+        const isOpen = settingsBody.classList.toggle('show');
+        settingsToggle.classList.toggle('open', isOpen);
+      });
+
+      // === Build Settings UI ===
+      function buildSettingsUI() {
+        gestureSettingsGrid.innerHTML = '';
+        for (const [key, config] of Object.entries(gestureConfig)) {
+          if (key === 'UNKNOWN') continue; // Skip unknown
+
+          const div = document.createElement('div');
+          div.className = 'gesture-setting-item';
+          div.innerHTML = `
+            <span class="gesture-setting-icon">${config.icon}</span>
+            <input type="text" class="gesture-setting-input" data-gesture="${key}" value="${escapeHtml(config.name)}" placeholder="Nama gestur...">
+          `;
+          gestureSettingsGrid.appendChild(div);
+        }
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.textContent = str;
+        return div.innerHTML;
+      }
+
+      // Save settings
+      document.getElementById('btnSaveSettings').addEventListener('click', () => {
+        const inputs = gestureSettingsGrid.querySelectorAll('.gesture-setting-input');
+        inputs.forEach(input => {
+          const key = input.dataset.gesture;
+          if (gestureConfig[key]) {
+            gestureConfig[key].name = input.value.trim() || gestureConfig[key].name;
+            gestureConfig[key].speech = input.value.trim() || gestureConfig[key].speech;
+          }
+        });
+        saveGestureConfig();
+        // Flash feedback
+        const btn = document.getElementById('btnSaveSettings');
+        btn.textContent = '✅ Ters
